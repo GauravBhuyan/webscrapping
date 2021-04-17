@@ -1,24 +1,25 @@
 import scrapy
 
-
-class QuotesSpider(scrapy.Spider):
-    name = "quotes"
+urli = []
+class ScrapeTransferTable(scrapy.Spider):
+    name = "scrape-transfer"
     start_urls = [
-        'http://quotes.toscrape.com/page/1/',
+        'https://www.lfchistory.net/Transfers/BySeason/122',
     ]
-
+    def start_requests(self):
+        for i in range(1,130):
+            url_link = "https://www.lfchistory.net/Transfers/BySeason/" + str(i)
+            urli.append(url_link)
+        
+        for url in urli:
+            yield scrapy.Request(url=url, callback=self.parse)
+			
     def parse(self, response):
-        for quote in response.css('div.quote'):
+        for row in response.xpath('//*[@class="table table-striped table-bordered layout_fixed lf-primary_table"]//tbody//tr'):
             yield {
-                'text': quote.css('span.text::text').get(),
-                'author': quote.css('small.author::text').get(),
-                'tags': quote.css('div.tags a.tag::text').getall(),
+                'name' : row.xpath('td[1]/a/text()').extract_first(),
+                'club': row.xpath('td[2]//text()').extract_first(),
+                'fee' : row.xpath('td[3]//text()').extract_first(),
+				'date' : row.xpath('td[4]//text()').extract_first(),
             }
 
-        next_page = response.css('li.next a::attr(href)').get()
-        if next_page is not None:
-            next_page = response.urljoin(next_page)
-            yield scrapy.Request(next_page, callback=self.parse)
-        filename = f'quotes-{page}.html'
-        with open(filename, 'wb') as f:
-            f.write(response.body)
